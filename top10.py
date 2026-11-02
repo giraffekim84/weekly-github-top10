@@ -14,6 +14,10 @@ import urllib.request
 TRENDING_URL = "https://github.com/trending?since=weekly"
 
 
+def env(name):
+    return (os.environ.get(name) or "").strip()  # 붙여넣기 공백 방지
+
+
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "weekly-top10"})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -79,13 +83,13 @@ def main():
     top = parse(fetch(TRENDING_URL))
     if not top:
         sys.exit("트렌딩 파싱 결과 0건 — GitHub 페이지 구조 변경 확인 필요")
-    msg = build_message(translate(top, os.environ.get("DEEPL_API_KEY")))
+    msg = build_message(translate(top, env("DEEPL_API_KEY")))
     if "--dry-run" in sys.argv:
         print(msg)
         return
 
-    slack = os.environ.get("SLACK_WEBHOOK_URL")
-    tg_token, tg_chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    slack = env("SLACK_WEBHOOK_URL")
+    tg_token, tg_chat = env("TELEGRAM_BOT_TOKEN"), env("TELEGRAM_CHAT_ID")
     if not (slack or (tg_token and tg_chat)):
         sys.exit("전송 채널 미설정: SLACK_WEBHOOK_URL 또는 TELEGRAM_BOT_TOKEN+TELEGRAM_CHAT_ID")
     if slack:
