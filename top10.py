@@ -1,6 +1,7 @@
 """GitHub 주간 트렌딩 TOP10을 Slack / Telegram으로 전송.
 
 env: SLACK_WEBHOOK_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (설정된 채널만 전송)
+     DEEPL_API_KEY (선택, 설명 한국어 번역)
 --dry-run: 전송 없이 메시지만 출력
 """
 import html
@@ -35,6 +36,28 @@ def parse(page):
     return sorted(repos, key=lambda r: r["stars"], reverse=True)[:10]
 
 
+def translate(top, key):
+    """설명을 DeepL로 한 번에 한국어 번역. 실패 시 원문 유지(발송이 우선)."""
+    idx = [i for i, r in enumerate(top) if r["desc"]]
+    if not (key and idx):
+        return top
+    host = "api-free.deepl.com" if key.endswith(":fx") else "api.deepl.com"
+    req = urllib.request.Request(
+        f"https://{host}/v2/translate",
+        json.dumps({"text": [top[i]["desc"] for i in idx], "target_lang": "KO"}).encode(),
+        {"Content-Type": "application/json", "Authorization": f"DeepL-Auth-Key {key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            texts = [t["text"] for t in json.load(r)["translations"]]
+    except Exception as e:  # noqa: BLE001
+        print(f"DeepL 번역 실패, 원문으로 전송: {e}", file=sys.stderr)
+        return top
+    out = [dict(r) for r in top]
+    for i, t in zip(idx, texts):
+        out[i]["desc"] = t
+    return out
+
+
 def build_message(top):
     total = sum(r["stars"] for r in top)
     lines = [f"이번 주 깃허브 TOP{len(top)}이 받은 별 {total:,}개 ⭐", ""]
@@ -56,7 +79,7 @@ def main():
     top = parse(fetch(TRENDING_URL))
     if not top:
         sys.exit("트렌딩 파싱 결과 0건 — GitHub 페이지 구조 변경 확인 필요")
-    msg = build_message(top)
+    msg = build_message(translate(top, os.environ.get("DEEPL_API_KEY")))
     if "--dry-run" in sys.argv:
         print(msg)
         return

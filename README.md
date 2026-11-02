@@ -30,6 +30,7 @@ github.com/pbakaus/impeccable
    |---|---|
    | `SLACK_WEBHOOK_URL` | Slack으로 받을 때 |
    | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram으로 받을 때 |
+   | `DEEPL_API_KEY` | (선택) 레포 설명을 한국어로 번역할 때. deepl.com/pro-api 무료 플랜(월 50만 자)으로 충분합니다. 번역이 실패하면 원문으로 보냅니다 |
 
 4. Actions 탭 → `weekly-top10` → **Run workflow**로 한 번 테스트합니다. 그다음부터는 매주 자동으로 실행됩니다.
 
